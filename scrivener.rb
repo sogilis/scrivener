@@ -16,6 +16,8 @@ module Scrivener
     end
 
     def run
+      abort("missing=AUTH_TOKEN") unless ENV["AUTH_TOKEN"]
+      abort("missing=ROOM") unless ENV["ROOM"]
       cache_rooms
       abort("no_rooms") unless @room_id
       cache_users
