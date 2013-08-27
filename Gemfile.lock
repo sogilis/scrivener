@@ -1,0 +1,14 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    excon (0.25.3)
+    multi_json (1.7.9)
+    oj (2.1.4)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  excon
+  multi_json
+  oj
