@@ -25,6 +25,7 @@ heroku create
 heroku config:add AUTH_TOKENS=
 heroku config:add ROOMS=
 git push heroku master
+heroku ps:scale worker=1
 ```
 
 Note that both `AUTH_TOKENS` and `ROOMS` are limited to one entry each until this bot has been battle tested a little more.
