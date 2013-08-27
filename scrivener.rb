@@ -8,7 +8,7 @@ module Scrivener
     def initialize
       @api1 = Excon.new("https://api.hipchat.com")
       @api2 = Excon.new("https://api.hipchat.com")
-      @auth_token = ENV["AUTH_TOKEN"]
+      @auth_token = ENV["AUTH_TOKENS"]
       @last_message_time = nil
       @mutex = Mutex.new
       @room_id = nil
@@ -16,8 +16,8 @@ module Scrivener
     end
 
     def run
-      abort("missing=AUTH_TOKEN") unless ENV["AUTH_TOKEN"]
-      abort("missing=ROOM") unless ENV["ROOM"]
+      abort("missing=AUTH_TOKENS") unless ENV["AUTH_TOKENS"]
+      abort("missing=ROOMS") unless ENV["ROOMS"]
       cache_rooms
       abort("no_rooms") unless @room_id
       cache_users
@@ -43,7 +43,7 @@ module Scrivener
         )
       }
       rooms["rooms"].each do |room|
-        if room["name"] == ENV["ROOM"]
+        if room["name"] == ENV["ROOMS"]
           @room_id = room["room_id"]
           log "room name=#{room["name"]} id=#{@room_id}"
         end

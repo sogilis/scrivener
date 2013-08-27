@@ -14,7 +14,7 @@ Scrivener requires an API `auth_token` with **admin** privileges. When referenci
 
 ```
 gem install foreman
-vi .env # add AUTH_TOKEN and ROOM
+vi .env # add AUTH_TOKENS and ROOMS
 foreman start
 ```
 
@@ -22,6 +22,9 @@ foreman start
 
 ```
 heroku create
-heroku config:add AUTH_TOKEN=
-heroku config:add ROOM=
+heroku config:add AUTH_TOKENS=
+heroku config:add ROOMS=
 git push heroku master
+```
+
+Note that both `AUTH_TOKENS` and `ROOMS` are limited to one entry each until this bot has been battle tested a little more.
