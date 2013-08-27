@@ -76,7 +76,7 @@ module Scrivener
         next if @last_message_time && time <= @last_message_time
 
         # don't try to process the message if it looks too stale either
-        next if time < Time.now - 10
+        next if time < Time.now - 20
 
         mentions = []
         @mutex.synchronize {
