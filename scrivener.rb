@@ -6,8 +6,7 @@ require "uri"
 module Scrivener
   class Main
     def initialize
-      @api1 = Excon.new("https://api.hipchat.com")
-      @api2 = Excon.new("https://api.hipchat.com")
+      @api = Excon.new("https://api.hipchat.com")
       @auth_token = ENV["AUTH_TOKENS"]
       @last_message_time = nil
       @mutex = Mutex.new
@@ -36,7 +35,7 @@ module Scrivener
     def cache_rooms
       log "cache_rooms"
       rooms = request {
-        @api1.get(
+        @api.get(
           path: "/v1/rooms/list",
           expects: 200,
           query: { auth_token: @auth_token }
@@ -53,7 +52,7 @@ module Scrivener
     def cache_users
       log "cache_users"
       users = request {
-        @api2.get(
+        @api.get(
           path: "/v1/users/list",
           expects: 200,
           query: { auth_token: @auth_token }
@@ -99,7 +98,7 @@ module Scrivener
 
     def get_messages(room_id)
       request {
-        @api1.get(
+        @api.get(
           path: "/v1/rooms/history",
           expects: 200,
           query: {
@@ -142,7 +141,7 @@ module Scrivener
 
     def post_message(message)
       request {
-        @api1.post(
+        @api.post(
           path: "/v1/rooms/message",
           expects: 200,
           query: URI.encode_www_form({
@@ -157,7 +156,10 @@ module Scrivener
     end
 
     def request
-      response = yield
+      # only allow one thread access to the connection object at any given time
+      response = @mutex.synchronize {
+        yield
+      }
       MultiJson.decode(response.body)
     rescue Excon::Errors::Forbidden
       log "rate_limited"
