@@ -8,6 +8,7 @@ module Scrivener
     def initialize
       @api = Excon.new("https://api.hipchat.com")
       @auth_token = ENV["AUTH_TOKENS"]
+      @ignore_users = ENV["IGNORE_USERS"] ? ENV["IGNORE_USERS"].split(",") : []
       @last_message_time = nil
       @mutex = Mutex.new
       @room_id = nil
@@ -17,6 +18,7 @@ module Scrivener
     def run
       abort("missing=AUTH_TOKENS") unless ENV["AUTH_TOKENS"]
       abort("missing=ROOMS") unless ENV["ROOMS"]
+      log "ignore_users=#{@ignore_users}"
       cache_rooms
       abort("no_rooms") unless @room_id
       cache_users
@@ -78,6 +80,9 @@ module Scrivener
 
         # don't try to process the message if it looks too stale either
         next if time < Time.now - 20
+
+        # don't process if from an ignored user
+        next if @ignore_users.include?(message["from"]["name"])
 
         mentions = []
         @mutex.synchronize {
