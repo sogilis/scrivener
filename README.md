@@ -2,19 +2,29 @@
 
 Acts as a helper between XMPP and HipChat so that when an XMPP client mentions a user's name, that mention is converted to a HipChat-style "mention" so that the user being mentioned is actually notified.
 
+The bot uses the HipChat API to get the names of all the rooms that it's able to connect to and the mappings of users' real names to "mention names", then connects to each room using XMPP and listens for mentions in new messages.
+
 This shouldn't be necessary. If you find this bot as annoying as I do, please [vote for HipChat to fix their XMPP support](http://help.hipchat.com/forums/138883-suggestions/suggestions/2979786-xmpp-group-chat-nicknames).
 
 ![Example screenshot](example.png)
 
 ## Prerequisites
 
-Scrivener requires an API `auth_token` with **admin** privileges. When referencing a room, use the actual room name like "API" or "Platform Incidents".
+Scrivener requires a HipChat account to make an XMPP connection and an API `auth_token` with **admin** privileges.
+
+## Configuration
+
+* `AUTH_TOKEN`: API key for looking up rooms and users. Must have **admin** privileges.
+* `IGNORE_USERS`: Nicks to ignore, i.e. whose messages are not searched for mentions.
+* `NICK`: Nick to be assigned to the Scrivener bot.
+* `XMPP_ID`: Jabber ID, e.g. `27879_289875@chat.hipchat.com/bot`.
+* `XMPP_PASSWORD`: Password of bot's HipChat account.
 
 ## Run Locally
 
 ```
 gem install foreman
-vi .env # add AUTH_TOKENS and ROOMS
+vi .env # add AUTH_TOKEN, NICK, XMPP_ID, XMPP_PASSWORD
 foreman start
 ```
 
@@ -22,10 +32,10 @@ foreman start
 
 ```
 heroku create
-heroku config:add AUTH_TOKENS=
-heroku config:add ROOMS=
+heroku config:add AUTH_TOKEN=
+heroku config:add NICK=
+heroku config:add XMPP_ID=
+heroku config:add XMPP_PASSWORD=
 git push heroku master
 heroku ps:scale worker=1
 ```
-
-Note that both `AUTH_TOKENS` and `ROOMS` are limited to one entry each until this bot has been battle tested a little more.
