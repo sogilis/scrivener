@@ -53,6 +53,19 @@ module Scrivener
       @user_lookup = user_lookup
     end
 
+    def get_rooms
+      rooms = request {
+        @api.get(
+          path: "/v1/rooms/list",
+          expects: 200,
+          query: { auth_token: @auth_token }
+        )
+      }
+      rooms["rooms"].
+        select { |r| !r["is_archived"] && !r["is_private"] }.
+        map { |r| r["xmpp_jid"] }
+    end
+
     def http_loop(sleep)
       loop do
         begin
@@ -74,18 +87,7 @@ module Scrivener
       @xmpp_client.auth(ENV["XMPP_PASSWORD"])
       @xmpp_client.send(Jabber::Presence.new.set_type(:available))
 
-      rooms = request {
-        @api.get(
-          path: "/v1/rooms/list",
-          expects: 200,
-          query: { auth_token: @auth_token }
-        )
-      }
-      rooms = rooms["rooms"].
-        select { |r| !r["is_archived"] && !r["is_private"] }.
-        map { |r| r["xmpp_jid"] }
-
-      rooms.each do |room|
+      get_rooms.each do |room|
         log "join room=#{room}"
         xmpp_muc = Jabber::MUC::SimpleMUCClient.new(@xmpp_client)
         xmpp_muc.on_message do |time, nick, text|
