@@ -70,18 +70,18 @@ module Scrivener
     def init_xmpp
       log "init_xmpp"
       @xmpp_client = Jabber::Client.new(ENV["XMPP_ID"])
-      @xmpp_muc = Jabber::MUC::SimpleMUCClient.new(@xmpp_client)
-
       @xmpp_client.connect
       @xmpp_client.auth(ENV["XMPP_PASSWORD"])
       @xmpp_client.send(Jabber::Presence.new.set_type(:available))
 
-      @xmpp_muc.on_message do |time, nick, text|
-        handle_message(nick, text)
+      ENV["ROOMS"].split(",").each do |room|
+        log "join room=#{room}/#{ENV["NICK"]}"
+        xmpp_muc = Jabber::MUC::SimpleMUCClient.new(@xmpp_client)
+        xmpp_muc.on_message do |time, nick, text|
+          handle_message(xmpp_muc, nick, text)
+        end
+        xmpp_muc.join("#{room}/#{ENV["NICK"]}")
       end
-
-      log "join room=#{ENV["ROOMS"] + '/' + ENV["NICK"]}"
-      @xmpp_muc.join(Jabber::JID.new(ENV["ROOMS"] + '/' + ENV["NICK"]))
     end
 
     def log(str)
@@ -97,7 +97,7 @@ module Scrivener
       return false
     end
 
-    def handle_message(nick, message)
+    def handle_message(xmpp_muc, nick, message)
       # don't process if from an ignored user
       return if @ignore_users.include?(nick)
 
@@ -108,7 +108,7 @@ module Scrivener
       if mentions.size > 0
         log "post_mention users=#{mentions.join(",")}"
         response = "#{mentions.map { |u| "@" + u }.join(" ")} ^^^"
-        @xmpp_muc.say(response)
+        xmpp_muc.say(response)
       end
     end
 
