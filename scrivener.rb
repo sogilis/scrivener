@@ -131,6 +131,10 @@ module Scrivener
     rescue Excon::Errors::Forbidden
       log "rate_limited"
       raise
+    rescue Excon::Errors::Error
+      log "api_error class=#{$!.class} message=#{$!.message}"
+      # reset the connection because we probably lost it
+      @api.reset
     end
   end
 end
