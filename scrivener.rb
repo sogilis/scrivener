@@ -48,7 +48,7 @@ module Scrivener
       user_lookup = {}
       users["users"].each do |user|
         user_lookup[user["name"]] = user["mention_name"]
-      # log "cached full=#{user["name"]} mention=#{user["mention_name"]}"
+        log "cached full=#{user["name"]} mention=#{user["mention_name"]}"
       end
       @user_lookup = user_lookup
     end
@@ -74,8 +74,19 @@ module Scrivener
       @xmpp_client.auth(ENV["XMPP_PASSWORD"])
       @xmpp_client.send(Jabber::Presence.new.set_type(:available))
 
-      ENV["ROOMS"].split(",").each do |room|
-        log "join room=#{room}/#{ENV["NICK"]}"
+      rooms = request {
+        @api.get(
+          path: "/v1/rooms/list",
+          expects: 200,
+          query: { auth_token: @auth_token }
+        )
+      }
+      rooms = rooms["rooms"].
+        select { |r| !r["is_archived"] && !r["is_private"] }.
+        map { |r| r["xmpp_jid"] }
+
+      rooms.each do |room|
+        log "join room=#{room}"
         xmpp_muc = Jabber::MUC::SimpleMUCClient.new(@xmpp_client)
         xmpp_muc.on_message do |time, nick, text|
           handle_message(xmpp_muc, nick, text)
@@ -85,7 +96,7 @@ module Scrivener
     end
 
     def log(str)
-      puts(str)
+      puts("app=scrivener " + str)
     end
 
     def message_mentions(message, full)
@@ -106,7 +117,7 @@ module Scrivener
         mentions << mention if message_mentions(message, full)
       end
       if mentions.size > 0
-        log "post_mention users=#{mentions.join(",")}"
+        log "post_mention room=#{xmpp_muc.room} users=#{mentions.join(",")}"
         response = "#{mentions.map { |u| "@" + u }.join(" ")} ^^^"
         xmpp_muc.say(response)
       end
