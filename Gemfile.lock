@@ -4,6 +4,7 @@ GEM
     excon (0.25.3)
     multi_json (1.7.9)
     oj (2.1.4)
+    xmpp4r (0.5)
 
 PLATFORMS
   ruby
@@ -12,3 +13,4 @@ DEPENDENCIES
   excon
   multi_json
   oj
+  xmpp4r

@@ -1,55 +1,35 @@
 require "excon"
 require "multi_json"
+require "oj"
 require "thread"
 require "uri"
+require 'xmpp4r'
+require 'xmpp4r/muc/helper/simplemucclient'
 
 module Scrivener
   class Main
     def initialize
-      @api = Excon.new("https://api.hipchat.com")
-      @auth_token = ENV["AUTH_TOKENS"]
+      @auth_token = ENV["AUTH_TOKEN"]
       @ignore_users = ENV["IGNORE_USERS"] ? ENV["IGNORE_USERS"].split(",") : []
-      @last_message_time = nil
       @mutex = Mutex.new
-      @room_id = nil
       @user_lookup = {}
     end
 
     def run
-      abort("missing=AUTH_TOKENS") unless ENV["AUTH_TOKENS"]
-      abort("missing=ROOMS") unless ENV["ROOMS"]
-      log "ignore_users=#{@ignore_users}"
-      cache_rooms
-      abort("no_rooms") unless @room_id
+      abort("missing=AUTH_TOKEN") unless ENV["AUTH_TOKEN"]
+      abort("missing=XMPP_ID") unless ENV["XMPP_ID"]
+      abort("missing=XMPP_PASSWORD") unless ENV["XMPP_PASSWORD"]
+
+      @api = Excon.new("https://api.hipchat.com")
+      init_xmpp
       cache_users
-      thread {
-        http_loop(5) do
-          check_messages
-        end
-      }
+
       http_loop(300) do
         cache_users
       end
     end
 
     private
-
-    def cache_rooms
-      log "cache_rooms"
-      rooms = request {
-        @api.get(
-          path: "/v1/rooms/list",
-          expects: 200,
-          query: { auth_token: @auth_token }
-        )
-      }
-      rooms["rooms"].each do |room|
-        if room["name"] == ENV["ROOMS"]
-          @room_id = room["room_id"]
-          log "room name=#{room["name"]} id=#{@room_id}"
-        end
-      end
-    end
 
     def cache_users
       log "cache_users"
@@ -70,51 +50,6 @@ module Scrivener
       end
     end
 
-    def check_messages
-      log "check_messages"
-      get_messages(@room_id).each do |message|
-        time = Time.parse(message["date"])
-
-        # only process messages that we haven't already done
-        next if @last_message_time && time <= @last_message_time
-
-        # don't try to process the message if it looks too stale either
-        next if time < Time.now - 20
-
-        # don't process if from an ignored user
-        next if @ignore_users.include?(message["from"]["name"])
-
-        mentions = []
-        @mutex.synchronize {
-          @user_lookup.each do |full, mention|
-            mentions << mention if message_mentions(message["message"], full)
-          end
-        }
-        if mentions.size > 0
-          log "post_mention users=#{mentions.join(",")}"
-          message = "#{mentions.map { |u| "@" + u }.join(" ")} ^^^"
-          post_message(message)
-        end
-
-        # messages are ordered by time ascending
-        @last_message_time = time
-      end
-    end
-
-    def get_messages(room_id)
-      request {
-        @api.get(
-          path: "/v1/rooms/history",
-          expects: 200,
-          query: {
-            auth_token: @auth_token,
-            date: "recent",
-            room_id: room_id,
-          }
-        )
-      }["messages"]
-    end
-
     def http_loop(sleep)
       loop do
         begin
@@ -127,6 +62,23 @@ module Scrivener
           next
         end
       end
+    end
+
+    def init_xmpp
+      log "init_xmpp"
+      @xmpp_client = Jabber::Client.new(ENV["XMPP_ID"])
+      @xmpp_muc = Jabber::MUC::SimpleMUCClient.new(@xmpp_client)
+
+      @xmpp_client.connect
+      @xmpp_client.auth(ENV["XMPP_PASSWORD"])
+      @xmpp_client.send(Jabber::Presence.new.set_type(:available))
+
+      @xmpp_muc.on_message do |time, nick, text|
+        process_message(nick, text)
+      end
+
+      log "join room=#{ENV["ROOMS"] + '/' + ENV["NICK"]}"
+      @xmpp_muc.join(ENV["ROOMS"] + '/' + ENV["NICK"])
     end
 
     def log(str)
@@ -144,20 +96,22 @@ module Scrivener
       return false
     end
 
-    def post_message(message)
-      request {
-        @api.post(
-          path: "/v1/rooms/message",
-          expects: 200,
-          query: URI.encode_www_form({
-            auth_token: @auth_token,
-            room_id: @room_id,
-            from: "Scrivener",
-            message: message,
-            notify: 1,
-          }),
-        )
+    def process_message(nick, message)
+p message
+      # don't process if from an ignored user
+      return if @ignore_users.include?(nick)
+
+      mentions = []
+      @mutex.synchronize {
+        @user_lookup.each do |full, mention|
+          mentions << mention if message_mentions(message, full)
+        end
       }
+      if mentions.size > 0
+        log "post_mention users=#{mentions.join(",")}"
+        response = "#{mentions.map { |u| "@" + u }.join(" ")} ^^^"
+      # @xmpp_muc.send Jabber::Message.new(@xmpp_muc.room, response)
+      end
     end
 
     def request
@@ -169,16 +123,6 @@ module Scrivener
     rescue Excon::Errors::Forbidden
       log "rate_limited"
       raise
-    end
-
-    def thread
-      Thread.start {
-        begin
-          yield
-        rescue
-          log "error class=#{$!.class} message=#{$!.message} backtrace=#{$!.backtrace.inspect}"
-        end
-      }
     end
   end
 end
