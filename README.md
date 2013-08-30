@@ -1,6 +1,6 @@
 # Scrivener
 
-Acts as a helper between XMPP and HipChat so that when an XMPP client does a "soft mention" a user's name (i.e. just their nick), that mention is converted to a HipChat-style "hard mention" (their configured @-name) so that the user being mentioned is actually notified.
+Acts as a helper between XMPP and HipChat so that when an XMPP client "soft mentions" a user's name (i.e. just their nick), that mention is converted to a HipChat-style "hard mention" (their configured @-name) so that the user being mentioned is actually notified.
 
 The bot uses the HipChat API to get the names of all the rooms that it's able to connect to and the mappings of users' real names to "mention names", then connects to each room using XMPP and listens for mentions in new messages.
 
