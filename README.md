@@ -4,7 +4,7 @@ Acts as a helper between XMPP and HipChat so that when an XMPP client "soft ment
 
 The bot uses the HipChat API to get the names of all the rooms that it's able to connect to and the mappings of users' real names to "mention names", then connects to each room using XMPP and listens for mentions in new messages.
 
-This is a hacky workaround and shouldn't be necessary. If you find this bot annoying, please [vote for HipChat to fix their XMPP support](http://help.hipchat.com/forums/138883-suggestions/suggestions/2979786-xmpp-group-chat-nicknames).
+This is a hacky workaround and shouldn't be necessary. If you find this bot annoying, please [vote for HipChat to fix their XMPP client support](http://help.hipchat.com/forums/138883-suggestions/suggestions/2979786-xmpp-group-chat-nicknames).
 
 ![Example screenshot](example.png)
 
