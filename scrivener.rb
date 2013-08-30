@@ -6,13 +6,17 @@ require "uri"
 require 'xmpp4r'
 require 'xmpp4r/muc/helper/simplemucclient'
 
+# XMPP4R is tightly coupled to REXML which has terrible UTF-8 support; monkey
+# patch this to avoid crazy warnings in 1.9+
+require_relative "patch"
+
 module Scrivener
   class Main
     def initialize
       @auth_token = ENV["AUTH_TOKEN"]
       @ignore_users = ENV["IGNORE_USERS"] ? ENV["IGNORE_USERS"].split(",") : []
-      @mutex = Mutex.new
       @user_lookup = {}
+      Jabber.warnings = true
     end
 
     def run
@@ -21,8 +25,9 @@ module Scrivener
       abort("missing=XMPP_PASSWORD") unless ENV["XMPP_PASSWORD"]
 
       @api = Excon.new("https://api.hipchat.com")
-      init_xmpp
+
       cache_users
+      init_xmpp
 
       http_loop(300) do
         cache_users
@@ -43,11 +48,9 @@ module Scrivener
       user_lookup = {}
       users["users"].each do |user|
         user_lookup[user["name"]] = user["mention_name"]
-        log "cached full=#{user["name"]} mention=#{user["mention_name"]}"
+      # log "cached full=#{user["name"]} mention=#{user["mention_name"]}"
       end
-      @mutex.synchronize do
-        @user_lookup = user_lookup
-      end
+      @user_lookup = user_lookup
     end
 
     def http_loop(sleep)
@@ -74,17 +77,15 @@ module Scrivener
       @xmpp_client.send(Jabber::Presence.new.set_type(:available))
 
       @xmpp_muc.on_message do |time, nick, text|
-        process_message(nick, text)
+        handle_message(nick, text)
       end
 
       log "join room=#{ENV["ROOMS"] + '/' + ENV["NICK"]}"
-      @xmpp_muc.join(ENV["ROOMS"] + '/' + ENV["NICK"])
+      @xmpp_muc.join(Jabber::JID.new(ENV["ROOMS"] + '/' + ENV["NICK"]))
     end
 
     def log(str)
-      @mutex.synchronize {
-        puts(str)
-      }
+      puts(str)
     end
 
     def message_mentions(message, full)
@@ -96,29 +97,23 @@ module Scrivener
       return false
     end
 
-    def process_message(nick, message)
-p message
+    def handle_message(nick, message)
       # don't process if from an ignored user
       return if @ignore_users.include?(nick)
 
       mentions = []
-      @mutex.synchronize {
-        @user_lookup.each do |full, mention|
-          mentions << mention if message_mentions(message, full)
-        end
-      }
+      @user_lookup.each do |full, mention|
+        mentions << mention if message_mentions(message, full)
+      end
       if mentions.size > 0
         log "post_mention users=#{mentions.join(",")}"
         response = "#{mentions.map { |u| "@" + u }.join(" ")} ^^^"
-      # @xmpp_muc.send Jabber::Message.new(@xmpp_muc.room, response)
+        @xmpp_muc.say(response)
       end
     end
 
     def request
-      # only allow one thread access to the connection object at any given time
-      response = @mutex.synchronize {
-        yield
-      }
+      response = yield
       MultiJson.decode(response.body)
     rescue Excon::Errors::Forbidden
       log "rate_limited"
