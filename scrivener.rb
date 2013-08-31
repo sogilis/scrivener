@@ -126,16 +126,21 @@ module Scrivener
     end
 
     def request
-      response = yield
-      MultiJson.decode(response.body)
-    rescue Excon::Errors::Forbidden
-      log "rate_limited"
-      raise
-    rescue Excon::Errors::Error
-      log "api_error class=#{$!.class} message=#{$!.message}"
-      # reset the connection because we probably lost it
-      @api.reset
-      raise
+      tries = 0
+      begin
+        tries += 1
+        response = yield
+        MultiJson.decode(response.body)
+      rescue Excon::Errors::Forbidden
+        log "rate_limited"
+        raise
+      rescue Excon::Errors::Error
+        log "api_error class=#{$!.class} message=#{$!.message}"
+        # reset the connection because we probably lost it
+        @api.reset
+        retry if tries < 2
+        raise
+      end
     end
   end
 end
