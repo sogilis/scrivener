@@ -135,6 +135,7 @@ module Scrivener
       log "api_error class=#{$!.class} message=#{$!.message}"
       # reset the connection because we probably lost it
       @api.reset
+      raise
     end
   end
 end
