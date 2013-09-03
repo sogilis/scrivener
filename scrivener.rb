@@ -15,6 +15,7 @@ module Scrivener
     def initialize
       @auth_token = ENV["AUTH_TOKEN"]
       @ignore_users = ENV["IGNORE_USERS"] ? ENV["IGNORE_USERS"].split(",") : []
+      @rooms = ENV["ROOMS"] ? ENV["ROOMS"].split(",") : []
       @user_lookup = {}
       Jabber.warnings = true
     end
@@ -63,7 +64,7 @@ module Scrivener
       }
       rooms["rooms"].
         select { |r| !r["is_archived"] && !r["is_private"] }.
-        map { |r| r["xmpp_jid"] }
+        map { |r| [r["name"], r["xmpp_jid"]] }
     end
 
     def http_loop(sleep)
@@ -87,13 +88,17 @@ module Scrivener
       @xmpp_client.auth(ENV["XMPP_PASSWORD"])
       @xmpp_client.send(Jabber::Presence.new.set_type(:available))
 
-      get_rooms.each do |room|
-        log "join room=#{room}"
+      get_rooms.each do |name, xmpp_jid|
+        # if the ROOMS option has been specified, restrict joins to those rooms
+        # only
+        next if !@rooms.empty? && !@rooms.include?(name)
+
+        log "join_room name=#{name} xmpp_jid=#{xmpp_jid}"
         xmpp_muc = Jabber::MUC::SimpleMUCClient.new(@xmpp_client)
         xmpp_muc.on_message do |time, nick, text|
           handle_message(xmpp_muc, nick, text)
         end
-        xmpp_muc.join("#{room}/#{ENV["NICK"]}")
+        xmpp_muc.join("#{xmpp_jid}/#{ENV["NICK"]}")
       end
     end
 
