@@ -114,6 +114,10 @@ module Scrivener
       # don't process if from an ignored user
       return if @ignore_users.include?(nick)
 
+      # don't process if not from a "known" user, we want to disclude announce
+      # bots etc.
+      return unless @user_lookup.include?(nick)
+
       mentions = []
       @user_lookup.each do |full, mention|
         mentions << mention if message_mentions(message, full)
