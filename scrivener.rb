@@ -109,11 +109,11 @@ module Scrivener
     def message_mentions(message, full)
       return true if message.index(full)
 
-      short = full.sub(" ", "")
+      short = full.gsub(" ", "")
       return true if message.index(short) && !message.index("@" + short)
 
       # also try without dots, like 'Ricardo Chimal Jr."
-      short = short.sub(".", "")
+      short = short.gsub(".", "")
       return true if message.index(short) && !message.index("@" + short)
 
       return false
