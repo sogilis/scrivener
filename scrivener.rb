@@ -112,6 +112,10 @@ module Scrivener
       short = full.sub(" ", "")
       return true if message.index(short) && !message.index("@" + short)
 
+      # also try without dots, like 'Ricardo Chimal Jr."
+      short = full.sub(".", "")
+      return true if message.index(short) && !message.index("@" + short)
+
       return false
     end
 
