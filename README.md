@@ -40,3 +40,9 @@ heroku config:add XMPP_PASSWORD=
 git push heroku master
 heroku ps:scale worker=1
 ```
+
+## Changelog
+
+### 2013/10/09
+
+* Mentions now only count if they are to the left of the colon (":"), so "BrandurLeach: hello" is a mention, but "hello BrandurLeach" is not.
