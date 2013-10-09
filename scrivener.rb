@@ -130,7 +130,10 @@ module Scrivener
       return unless @user_lookup.include?(nick)
 
       mentions = []
-      @user_lookup.reject { |k,v| k == nick }.each do |full, mention|
+      @user_lookup.each do |full, mention|
+        # don't alert users when they mention themselves
+        next if full == nick
+
         mentions << mention if message_mentions(message, full)
       end
       if mentions.size > 0
