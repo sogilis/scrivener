@@ -17,6 +17,8 @@ module Scrivener
       @ignore_users = ENV["IGNORE_USERS"] ? ENV["IGNORE_USERS"].split(",") : []
       @rooms = ENV["ROOMS"] ? ENV["ROOMS"].split(",") : []
       @user_lookup = {}
+      @ignore_users << ENV["NICK"]
+      log "ignore_users=#{@ignore_users.join ','}"
       Jabber.warnings = true
     end
 
