@@ -109,14 +109,14 @@ module Scrivener
     def message_mentions(message, full)
       # make sure there's a colon to the right of the name so that we don't
       # unintentionally catch off-hand mentions
-      return true if message =~ /#{full}.*:/
+      return true if message =~ /#{full}.*[:,]/
 
       short = full.gsub(" ", "")
-      return true if message =~ /#{short}.*:/ && !message.index("@" + short)
+      return true if message =~ /#{short}.*[:,]/ && !message.index("@" + short)
 
       # also try without dots, like 'Ricardo Chimal Jr."
       short = short.gsub(".", "")
-      return true if message =~ /#{short}.*:/ && !message.index("@" + short)
+      return true if message =~ /#{short}.*[:,]/ && !message.index("@" + short)
 
       return false
     end
