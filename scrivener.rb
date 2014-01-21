@@ -106,7 +106,7 @@ module Scrivener
       puts("app=scrivener " + str)
     end
 
-    def message_mentions(message, full)
+    def message_mentions_full(message, full)
       # make sure there's a colon to the right of the name so that we don't
       # unintentionally catch off-hand mentions
       return true if message =~ /#{full}.*[:,]/
@@ -121,6 +121,13 @@ module Scrivener
       return false
     end
 
+    def message_mentions_nick(message, mention)
+      return true if message.include? "@all"
+      return true if message.include? mention
+
+      return false
+    end
+
     def handle_message(xmpp_muc, nick, message)
       # don't process if from an ignored user
       return if @ignore_users.include?(nick)
@@ -129,12 +136,23 @@ module Scrivener
       # bots etc.
       return unless @user_lookup.include?(nick)
 
+      @user_lookup.each do |full, mention|
+        # don't alert users when they mention themselves
+        next if full == nick
+
+        if message_mentions_nick(message, mention)
+          log "post_mention room=#{xmpp_muc.room} user=#{full}"
+          response = "#{full}: ^^^"
+          xmpp_muc.say(response)
+        end
+      end
+
       mentions = []
       @user_lookup.each do |full, mention|
         # don't alert users when they mention themselves
         next if full == nick
 
-        mentions << mention if message_mentions(message, full)
+        mentions << mention if message_mentions_full(message, full)
       end
       if mentions.size > 0
         log "post_mention room=#{xmpp_muc.room} users=#{mentions.join(",")}"
